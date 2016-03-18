@@ -5,8 +5,16 @@ from invenio_circulation.signals import (
 def _get_action(action, try_action=False):
     import invenio_circulation_acquisition.api as api
 
-    actions = {'cancel_acquisition_request': (api.acquisition, 'cancel_acquisition_request'),
-               'request_acquisition_extension': (api.acquisition, 'request_acquisition_extension'),
+    actions = {'confirm_acquisition_request': (api.acquisition,
+                                               'confirm_acquisition_request'),
+               'receive_acquisition': (api.acquisition, 'receive_acquisition'),
+               'deliver_acquisition': (api.acquisition, 'deliver_acquisition'),
+               'decline_acquisition_request': (api.acquisition,
+                                               'decline_acquisition_request'),
+               'cancel_acquisition_request': (api.acquisition,
+                                              'cancel_acquisition_request'),
+               'request_acquisition_extension':
+               (api.acquisition, 'request_acquisition_extension'),
                'lose_acquisition': (api.acquisition, 'lose_acquisition')}
 
     try_action = 'try_' if try_action else ''
@@ -59,11 +67,12 @@ def _convert_params(entity, data):
     import invenio_circulation_acquisition.models as models
 
     try:
-        acquisition_lc = models.AcquisitionLoanCycle.get(data['acquisition_lc_id'])
+        acquisition_lc_id = data['acquisition_lc_id']
+        acquisition_lc = models.AcquisitionLoanCycle.get(acquisition_lc_id)
     except Exception:
         acquisition_lc = None
 
-    res = {'acquisition_lc': acquisition_lc}
+    res = {'acquisition_loan_cycle': acquisition_lc}
 
     return {'name': 'acquisition', 'result': res}
 

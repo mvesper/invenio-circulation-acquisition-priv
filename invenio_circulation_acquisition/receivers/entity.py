@@ -12,7 +12,8 @@ from invenio_circulation.signals import (entities_overview,
 def _entities_overview(sender, data):
     return {'name': 'acquisition_entity',
             'priority': 1.0,
-            'result': [('Acquisition Loan Cycle', 'acquisition_loan_cycle')]}
+            'result': [('Acquisition Loan Cycle', 'acquisition_loan_cycle'),
+                       ('Acquisition Vendor', 'acquisition_vendor')]}
 
 
 def _entities_hub_search(sender, data):

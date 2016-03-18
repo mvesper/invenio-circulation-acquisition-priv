@@ -21,4 +21,5 @@ require([
     'jquery',
     'js/other/jsoneditor.min',
     'js/circulation_acquisition',
+    'js/circulation/entity_actions'
 ], function() {});

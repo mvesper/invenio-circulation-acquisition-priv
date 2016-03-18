@@ -41,83 +41,55 @@ function($, _bdp) {
     });
 
     $('#acquisition_request_submit').on('click', function(){
-        function get_form_data(element) {
-            var data = {};
-            $(element).find('.form-control').each(function(i, elem){
-                elem = $(elem);
-                var tmp = elem.attr('id').split('_');
-                tmp.splice(0, 1);
-                var field = tmp.join('_');
-                data[field] = elem.val();
-            });
-            return data
-        }
+        // Get record values
+        var rec = {};
+        $('#acquisition_document').find('.form-control').each(function(index, element) {
+            rec[$(element).data('value_name')] = element.value;
+        });
 
-        var type = $(this).data('type');
-        var user_id = $('#acquisition_document').data('user_id');
+        // Get user values
+        var user = {};
+        $('#user_form').find('.form-control').each(function(index, element) {
+            user[$(element).data('value_name')] = element.value;
+        });
+
         var record_id = $('#acquisition_document').data('record_id');
-        var comments = $('#request_comments').val();
+        var acquisition_type = $(this).data('type');
         var delivery = $('#circulation_option_delivery').val();
-
-        var record = get_form_data('#document_form');
-        record['record_id'] = record_id;
-
-        var user = get_form_data('#user_form');
-
-        var search_body = {user_id: user_id,
-                           user: user,
-                           record: record,
-                           comments: comments,
-                           delivery: delivery,
-                           type: type};
+        var payment_method = $('#circulation_option_payment_method').val();
+        var budget_code = $('#circulation_option_budget_code').val();
+        var copies = $('#circulation_option_copies').val();
+        var comments = $('#circulation_option_comments').val();
 
         if ($(this).data('action') == 'request'){
-            var url = '/circulation/api/ill/request_acquisition/';
+            var url = '/circulation/api/acquisition/request_acquisition/';
         } else {
-            var url = '/circulation/api/ill/register_acquisition/';
+            var url = '/circulation/api/acquisition/register_acquisition/';
         }
+        var data = {record: rec, user: user, record_id: record_id, 
+                    acquisition_type: acquisition_type,
+                    payment_method: payment_method, budget_code: budget_code,
+                    comments: comments, delivery: delivery, copies: copies};
 
         function success() {
-            location.reload()
+            $(document).scrollTop(0);
+            window.location.reload();
         }
 
         $.ajax({
             type: "POST",
             url: url,
-            data: JSON.stringify(JSON.stringify(search_body)),
-            success: success,
-            contentType: 'application/json',
-        });
-    });
-
-    $(document).ready(function(){
-        if($('#circulation_alert').length){
-            function hide_circulation_alert(){
-                $('#circulation_alert').fadeOut(1000);
-            }
-            setTimeout(hide_circulation_alert, 5000);
-        }
-    });
-
-    $('.acquisition_list_action').on('click', function(event) {
-        var data = $(event.target).data();
-
-        function success() {
-            location.reload()
-        }
-
-        $.ajax({
-            type: "POST",
-            url: "/circulation/api/acquisition/perform_action/",
             data: JSON.stringify(JSON.stringify(data)),
             success: success,
             contentType: 'application/json',
         });
     });
 
-    /*
-    $('#acquisition_date_from').datepicker({ dateFormat: 'yy-mm-dd' });
-    $('#acquisition_date_to').datepicker({ dateFormat: 'yy-mm-dd' });
-    */
-}
-);
+    $('#circulation_option_payment_method').on('change', function(event) {
+        if (event.target.value == 'Budget Code') {
+            $('#circulation_option_budget_code').show();
+        } else {
+            $('#circulation_option_budget_code').hide();
+        }
+    });
+});

@@ -1,3 +1,5 @@
+import datetime
+
 from invenio_circulation.api.item import create as create_item
 from invenio_circulation.api.event import create as create_event
 from invenio_circulation.api.utils import email_notification
@@ -20,28 +22,30 @@ def _create_acquisition_temporary_item(record):
     return item
 
 
-def request_acquisition(user, record, acquisition_type,
-                        comments='', delivery=None):
+def request_acquisition(user, record, acquisition_type, copies,
+                        payment_method, budget_code='', price='',
+                        delivery=None, comments=''):
     if not delivery:
         delivery = AcquisitionLoanCycle.DELIVERY_DEFAULT
 
     item = _create_acquisition_temporary_item(record)
 
-    status = AcquisitionLoanCycle.STATUS_REQUESTED
-    acquisition_clc = AcquisitionLoanCycle.new(current_status=status,
-                                               item=item, user=user,
-                                               delivery=delivery,
-                                               comments=comments)
+    acquisition_clc = AcquisitionLoanCycle.new(
+            current_status=AcquisitionLoanCycle.STATUS_REQUESTED,
+            item=item, user=user,
+            acquisition_type=acquisition_type,
+            copies=copies,
+            payment_method=payment_method,
+            budget_code=budget_code,
+            price=price,
+            delivery=delivery,
+            comments=comments,
+            issued_date=datetime.datetime.now())
 
     if acquisition_type == 'acquisition':
-        _type = AcquisitionLoanCycle.TYPE_ACQUISITION
         event = AcquisitionLoanCycle.EVENT_ACQUISITION_REQUEST
     elif acquisition_type == 'purchase':
-        _type = AcquisitionLoanCycle.TYPE_PURCHASE
         event = AcquisitionLoanCycle.EVENT_PURCHASE_REQUEST
-
-    acquisition_clc.additional_statuses.append(_type)
-    acquisition_clc.save()
 
     create_event(user_id=user.id, item_id=item.id,
                  acquisition_loan_cycle_id=acquisition_clc.id,
@@ -66,13 +70,15 @@ def try_confirm_acquisition_request(acquisition_loan_cycle):
         raise ValidationExceptions(exceptions)
 
 
-def confirm_acquisition_request(acquisition_loan_cycle):
+def confirm_acquisition_request(acquisition_loan_cycle, vendor_id, price):
     try:
         try_confirm_acquisition_request(acquisition_loan_cycle)
     except ValidationExceptions as e:
         raise e
 
     acquisition_loan_cycle.current_status = AcquisitionLoanCycle.STATUS_ORDERED
+    acquisition_loan_cycle.vendor_id = vendor_id
+    acquisition_loan_cycle.price = price
     acquisition_loan_cycle.save()
 
     create_event(acquisition_loan_cycle_id=acquisition_loan_cycle.id,
@@ -83,11 +89,11 @@ def confirm_acquisition_request(acquisition_loan_cycle):
                        acquisition_loan_cycle=acquisition_loan_cycle)
 
 
-def try_receive_acquisition(acquisition_lc):
+def try_receive_acquisition(acquisition_loan_cycle):
     exceptions = []
     try:
         status = AcquisitionLoanCycle.STATUS_ORDERED
-        assert (acquisition_lc.current_status == status,
+        assert (acquisition_loan_cycle.current_status == status,
                 'The acquisition loan cycle is in the wrong state')
     except AssertionError as e:
         exceptions.append(('acquisition', e))
@@ -114,13 +120,13 @@ def receive_acquisition(acquisition_loan_cycle):
                        acquisition_loan_cycle=acquisition_loan_cycle)
 
 
-def try_cancel_acquisition_request(acquisition_lc):
+def try_cancel_acquisition_request(acquisition_loan_cycle):
     exceptions = []
     try:
         status1 = AcquisitionLoanCycle.STATUS_REQUESTED
         status2 = AcquisitionLoanCycle.STATUS_ORDERED
-        assert (acquisition_lc.current_status == status1 or
-                acquisition_lc.current_status == status2,
+        assert (acquisition_loan_cycle.current_status == status1 or
+                acquisition_loan_cycle.current_status == status2,
                 'The acquisition loan cycle is in the wrong state')
     except AssertionError as e:
         exceptions.append(('acquisition', e))
@@ -129,24 +135,26 @@ def try_cancel_acquisition_request(acquisition_lc):
         raise ValidationExceptions(exceptions)
 
 
-def cancel_acquisition_request(acquisition_lc):
+def cancel_acquisition_request(acquisition_loan_cycle, reason=''):
     try:
-        try_cancel_acquisition_request(acquisition_lc)
+        try_cancel_acquisition_request(acquisition_loan_cycle)
     except ValidationExceptions as e:
         raise e
 
-    acquisition_lc.current_status = AcquisitionLoanCycle.STATUS_CANCELED
-    acquisition_lc.save()
+    status = AcquisitionLoanCycle.STATUS_CANCELED
+    acquisition_loan_cycle.current_status = status
+    acquisition_loan_cycle.save()
 
-    create_event(acquisition_loan_cycle_id=acquisition_lc.id,
-                 event=AcquisitionLoanCycle.EVENT_ACQUISITION_CANCELED)
+    create_event(acquisition_loan_cycle_id=acquisition_loan_cycle.id,
+                 event=AcquisitionLoanCycle.EVENT_ACQUISITION_CANCELED,
+                 description=reason)
 
 
-def try_decline_acquisition_request(acquisition_lc):
+def try_decline_acquisition_request(acquisition_loan_cycle):
     exceptions = []
     try:
         status = AcquisitionLoanCycle.STATUS_REQUESTED
-        assert (acquisition_lc.current_status == status,
+        assert (acquisition_loan_cycle.current_status == status,
                 'The acquisition loan cycle is in the wrong state')
     except AssertionError as e:
         exceptions.append(('acquisition', e))
@@ -173,11 +181,11 @@ def decline_acquisition_request(acquisition_loan_cycle):
                        acquisition_loan_cycle=acquisition_loan_cycle)
 
 
-def try_deliver_acquisition(acquisition_lc):
+def try_deliver_acquisition(acquisition_loan_cycle):
     exceptions = []
     try:
         status = AcquisitionLoanCycle.STATUS_ORDERED
-        assert (acquisition_lc.current_status == status,
+        assert (acquisition_loan_cycle.current_status == status,
                 'The acquisition loan cycle is in the wrong state')
     except AssertionError as e:
         exceptions.append(('acquisition', e))
@@ -186,18 +194,19 @@ def try_deliver_acquisition(acquisition_lc):
         raise ValidationExceptions(exceptions)
 
 
-def deliver_acquisition(acquisition_lc):
+def deliver_acquisition(acquisition_loan_cycle):
     try:
-        try_deliver_acquisition(acquisition_lc)
+        try_deliver_acquisition(acquisition_loan_cycle)
     except ValidationExceptions as e:
         raise e
 
-    acquisition_lc.current_status = AcquisitionLoanCycle.STATUS_DELIVERED
-    acquisition_lc.save()
+    status = AcquisitionLoanCycle.STATUS_DELIVERED
+    acquisition_loan_cycle.current_status = status
+    acquisition_loan_cycle.save()
 
-    create_event(acquisition_loan_cycle_id=acquisition_lc.id,
+    create_event(acquisition_loan_cycle_id=acquisition_loan_cycle.id,
                  event=AcquisitionLoanCycle.EVENT_ACQUISITION_DELIVERED)
 
     email_notification('acquisition_delivery', 'john.doe@cern.ch',
-                       acquisition_lc.user.email,
-                       acquisition_loan_cycle=acquisition_lc)
+                       acquisition_loan_cycle.user.email,
+                       acquisition_loan_cycle=acquisition_loan_cycle)

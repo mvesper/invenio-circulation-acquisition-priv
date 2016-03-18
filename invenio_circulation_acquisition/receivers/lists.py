@@ -13,14 +13,7 @@ def _lists_overview(sender, data):
 
 
 def _lists_class(link, data):
-    from invenio_circulation_acquisition.lists.requested_acquisitions import (
-            RequestedAcquisition)
-    from invenio_circulation_acquisition.lists.ordered_acquisitions import (
-            OrderedAcquisition)
-    from invenio_circulation_acquisition.lists.requested_purchase import (
-            RequestedPurchase)
-    from invenio_circulation_acquisition.lists.ordered_purchase import (
-            OrderedPurchase)
+    from invenio_circulation_acquisition.lists.acquisition import *
 
     clazzes = {'requested_acquisition': RequestedAcquisition,
                'ordered_acquisition': OrderedAcquisition,

@@ -11,7 +11,7 @@ def _user_current_holds(sender, data):
     TR = models.AcquisitionLoanCycle.TYPE_ACQUISITION
     TP = models.AcquisitionLoanCycle.TYPE_PURCHASE
 
-    q = 'user_id:{0} current_status:{1} additional_statuses:{2}'
+    q = 'user_id:{0} current_status:{1} acquisition_type:{2}'
 
     def _search(status, additional_status):
         query = q.format(user_id, status, additional_status)

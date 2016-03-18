@@ -12,10 +12,13 @@ def create_indices(app):
 def generate(app=None):
     import datetime
 
-    import invenio_circulation.models as models
+    import invenio_circulation_acquisition.models as models
     import invenio_circulation_acquisition.api as api
 
     create_indices(app)
+
+    models.AcquisitionVendor.new(name='amazon.com', address='', email='',
+                                 phone='', notes='')
 
     '''
     user = models.CirculationUser.get(1)

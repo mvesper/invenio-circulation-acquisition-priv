@@ -42,37 +42,64 @@
     <div class="panel-body">
         <form id="document_form">
             <div class="form-group">
-                <label for="exampleInputEmail1">Title</label>
-                <input id="document_title" class="form-control" value="{{title}}">
+                <label>Title</label>
+                <input class="form-control" value="{{title_statement.title}}" data-value_name="title_statement.title">
             </div>
             <div class="form-group">
-                <label for="exampleInputEmail1">ISBN</label>
-                <input id="document_isbn" class="form-control" value="{{isbn}}">
+                <label>ISBN</label>
+                <input class="form-control" value="{{international_standard_book_number.international_standard_book_number}}" data-value_name="international_standard_book_number.international_standard_book_number">
             </div>
             <div class="form-group">
-                <label for="exampleInputEmail1">Authors</label>
-                <input id="document_authors" class="form-control" placeholder="Author list separated by semicolons" value="{{authors}}">
+                <label>Authors</label>
+                <input class="form-control" placeholder="Author list separated by semicolons" value="{{circulation_compact_authors}}" data-value_name="circulation_compact_authors">
             </div>
             <div class="form-group">
-                <label for="exampleInputEmail1">Year</label>
-                <input id="document_year" class="form-control" value="{{year}}">
+                <label>Year</label>
+                <input class="form-control" value="{{publication_distribution_imprint.0.date_of_publication_distribution.0}}" data-value_name="publication_distribution_imprint.0.date_of_publication_distribution.0">
             </div>
             <div class="form-group">
-                <label for="exampleInputEmail1">Publisher</label>
-                <input id="document_publisher" class="form-control" value="{{publisher}}">
+                <label>Publisher</label>
+                <input class="form-control" value="{{publication_distribution_imprint.0.name_of_publisher_distributor.0}}" data-value_name="publication_distribution_imprint.0.name_of_publisher_distributor.0">
             </div>
+            <div class="form-group">
+                <label>Edition</label>
+                <input class="form-control" value="{{edition_statement.edition_statement}}" data-value_name="edition_statement.edition_statement">
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="panel panel-default">
+    <div class="panel-heading">Acquisition Information</div>
+    <div class="panel-body">
+        <form>
             {% if delivery %}
             <div class="form-group">
-                <label for="exampleInputEmail1">Delivery</label>
-                <select class="form-control circulation_option" id="circulation_option_delivery" data-val="{{delivery}}">
+                <label>Delivery</label>
+                <select class="form-control" id="circulation_option_delivery">
                     <option>Pick up</option>
                     <option>Internal Mail</option>
                 </select>
             </div>
             {% endif %}
             <div class="form-group">
-                <label for="exampleInputEmail1">Additional Comments</label>
-                <textarea id="request_comments" class="form-control" rows="3"></textarea>
+                <label>Payment Method</label>
+                <select class="form-control" id="circulation_option_payment_method">
+                    <option>Cash</option>
+                    <option>Budget Code</option>
+                </select>
+            </div>
+            <div id="circulation_option_budget_code" class="form-group" style="display:None">
+                <label>Budget Code</label>
+                <input class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Copies</label>
+                <input id="circulation_option_copies" class="form-control" value="1">
+            </div>
+            <div class="form-group">
+                <label>Additional Comments</label>
+                <textarea id="circulation_option_comments" class="form-control" rows="3"></textarea>
             </div>
         </form>
     </div>

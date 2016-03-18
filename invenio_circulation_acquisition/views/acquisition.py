@@ -18,128 +18,182 @@
 # 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 import json
-import datetime
 
 import invenio_circulation.models as circ_models
-import invenio_circulation_acquisition.models as models
 import invenio_circulation_acquisition.api as api
 
 from flask import Blueprint, render_template, flash, request
+from flask_login import current_user
 from invenio_records.api import Record
 from invenio_circulation.acl import circulation_admin_permission as cap
+from invenio_circulation.views.utils import get_user
 
 blueprint = Blueprint('acquisition', __name__, url_prefix='/circulation',
                       template_folder='../templates',
                       static_folder='../static')
 
+rec_fields = [(('title_statement', 'title'), ''),
+              (('international_standard_book_number',
+                'international_standard_book_number'), ''),
+              (('publication_distribution_imprint', 0,
+                'date_of_publication_distribution', 0), ''),
+              (('publication_distribution_imprint', 0,
+                'name_of_publisher_distributor', 0), ''),
+              (('international_standard_serial_number',
+                'international_standard_serial_number'), ''),
+              (('edition_statement', 'edition_statement'), ''),
+              (('host_item_entry', 'abbreviated_title'), ''),
+              (('host_item_entry', 'volume'), ''),
+              (('host_item_entry', 'issue'), ''),
+              (('host_item_entry', 'pages'), ''),
+              (('host_item_entry', 'year'), '')]
 
-def _get_acquisition_data(user_id, record_id):
-    rec = Record.get_record(record_id) if record_id else {}
-    data = {'record_id': record_id, 'user_id': user_id}
 
-    try:
-        data['title'] = rec['title_statement']['title']
-    except Exception:
-        pass
+def _prepare_record(record, fields):
+    def _get_struct(field, index, value):
+        try:
+            return [] if type(field[index+1]) == int else {}
+        except IndexError:
+            return value
 
-    try:
-        data['isbn'] = rec['international_standard_book_number']
-    except Exception:
-        pass
+    for field, value in fields:
+        rec = record
 
-    imprint = 'publication_distribution_imprint'
+        for i, key in list(enumerate(field)):
+            if isinstance(rec, dict):
+                if key not in rec:
+                    rec[key] = _get_struct(field, i, value)
+                rec = rec[key]
+            elif isinstance(rec, list):
+                if key >= len(rec):
+                    rec.append(_get_struct(field, i, value))
+                rec = rec[key]
 
-    try:
-        date = 'date_of_publication_distribution'
-        data['year'] = rec[imprint][0][date][0]
-    except Exception:
-        pass
 
-    try:
-        publisher = 'name_of_publisher_distributor'
-        data['publisher'] = rec[imprint][0][publisher][0]
-    except Exception:
-        pass
-
-    data['authors'] = []
+def _prepare_record_authors(rec):
+    key = 'circulation_compact_authors'
+    rec[key] = []
     pn = 'personal_name'
+
     try:
-        data['authors'].append(rec['main_entry_personal_name'][pn])
+        rec[key].append(rec['main_entry_personal_name'][pn])
     except Exception:
         pass
 
     try:
-        tmp = [x[pn] for x in rec['added_entry_personal_name']]
-        data['authors'].extend(tmp)
+        rec[key].extend([x[pn] for x in rec['added_entry_personal_name']])
     except Exception:
         pass
 
-    data['authors'] = '; '.join(data['authors'])
+    rec[key] = '; '.join(rec[key])
 
 
-    return data
+@blueprint.route('/acquisition/request_acquisition/')
+@blueprint.route('/acquisition/request_acquisition/<record_id>')
+def acquisition_request(record_id=None):
+    try:
+        get_user(current_user)
+    except AttributeError:
+        # Anonymous User
+        return render_template('invenio_theme/401.html')
 
+    rec = Record.get_record(record_id) if record_id else {}
+    _prepare_record(rec, rec_fields)
+    _prepare_record_authors(rec)
 
-@blueprint.route('/acquisition/request_acquisition/<user_id>/')
-@blueprint.route('/acquisition/request_acquisition/<user_id>/<record_id>')
-def acquisition_request(user_id, record_id=0):
-    data = _get_acquisition_data(user_id, record_id)
     return render_template('circulation_acquisition_request.html',
-                           type='acquisition', delivery=True, action='request',
-                           **data)
+                           type='acquisition', action='request',
+                           **rec)
 
 
-@blueprint.route('/acquisition/request_purchase/<user_id>/')
-@blueprint.route('/acquisition/request_purchase/<user_id>/<record_id>')
-def purchase_request(user_id, record_id=0):
-    data = _get_acquisition_data(user_id, record_id)
+@blueprint.route('/acquisition/request_purchase/')
+@blueprint.route('/acquisition/request_purchase/<record_id>')
+def purchase_request(record_id=0):
+    try:
+        get_user(current_user)
+    except AttributeError:
+        # Anonymous User
+        return render_template('invenio_theme/401.html')
+
+    rec = Record.get_record(record_id) if record_id else {}
+    _prepare_record(rec, rec_fields)
+    _prepare_record_authors(rec)
+
     return render_template('circulation_acquisition_request.html',
                            type='purchase', delivery=True, action='request',
-                           **data)
+                           **rec)
 
 
 @blueprint.route('/acquisition/register_acquisition/')
 @blueprint.route('/acquisition/register_acquisition/<record_id>')
 @cap.require(403)
 def acquisition_register(record_id=None):
-    # data = _get_acquisition_data(user_id, record_id)
-    data = {}
-    return render_template('circulation_acquisition_register.html',
-                           type='acquisition', action='register', **data)
+    rec = Record.get_record(record_id) if record_id else {}
+    _prepare_record(rec, rec_fields)
+    _prepare_record_authors(rec)
+    return render_template('circulation_acquisition_request.html',
+                           type='acquisition', action='register', **rec)
 
 
 @blueprint.route('/acquisition/register_purchase/')
 @blueprint.route('/acquisition/register_purchase/<record_id>')
 @cap.require(403)
 def purchase_register(record_id=None):
-    # data = _get_acquisition_data(user_id, record_id)
-    data = {}
+    rec = Record.get_record(record_id) if record_id else {}
+    _prepare_record(rec, rec_fields)
+    _prepare_record_authors(rec)
     return render_template('circulation_acquisition_register.html',
-                           type='purchase', action='register', **data)
+                           type='purchase', delivery=True, action='register',
+                           **rec)
 
 
 def _create_record(data):
-    from copy import copy
-    from invenio_records.api import create_record
+    # TODO: It might make sense to mark the new record as temporary
+    import uuid
+    import dateutil.parser as parser
 
-    data = copy(data)
-    del data['record_id']
+    from invenio_db import db
+    from invenio_pidstore.minters import recid_minter
+    from invenio_indexer.api import RecordIndexer
+    from invenio_records.api import Record
 
-    authors = data['authors'].split(';')
-    if authors:
-        main_author = authors[0]
-        added_authors = authors[1:]
+    def _get_keys(key_string):
+        return [int(x) if x.isdigit() else unicode(x)
+                for x in key_string.split('.')]
 
-    record = {'title_statement': {'title': data['title']},
-              'international_standard_book_number': data['isbn'],
-              'publication_distribution_imprint': [
-                  {'date_of_publication_distribution': [data['year']],
-                   'name_of_publisher_distributor': [data['publisher']]}],
-              'main_entry_personal_name': {'personal_name': main_author},
-              'added_entry_personal_name': [
-                  {'personal_name': x} for x in added_authors]}
+    authors = data['circulation_compact_authors'].split(';')
+    del data['circulation_compact_authors']
 
-    return create_record(record)
+    fields = [(_get_keys(key), unicode(value)) for key, value in data.items()]
+
+    rec = {}
+    _prepare_record(rec, fields)
+
+    rec[u'main_entry_personal_name'] = {u'personal_name': unicode(authors[0])}
+    rec[u'added_entry_personal_name'] = [{u'personal_name': unicode(x)}
+                                         for x in authors[1:]]
+
+    # We need to check the year here
+    year = (rec[u'publication_distribution_imprint'][0]
+               [u'date_of_publication_distribution'][0])
+
+    if year == u'':
+        del (rec[u'publication_distribution_imprint'][0]
+                [u'date_of_publication_distribution'])
+
+    parser.parse(year)
+
+    rec_uuid = uuid.uuid4()
+    pid = recid_minter(rec_uuid, rec)
+    rec[u'recid'] = int(pid.pid_value)
+    rec[u'uuid'] = unicode(str(rec_uuid))
+
+    r = Record.create(rec, id_=rec_uuid)
+    RecordIndexer().index(r)
+
+    db.session.commit()
+
+    return r
 
 
 def _try_fetch_user(user):
@@ -155,21 +209,27 @@ def _try_fetch_user(user):
 
 
 def _create_acquisition(data, user):
-    if data['record']['record_id']:
-        record = circ_models.CirculationRecord.get(data['record']['record_id'])
-    else:
-        # TODO: It might make sense to mark the new record as temporary
-        record = _create_record(data['record'])
-        record = circ_models.CirculationRecord.get(record['control_number'])
+    try:
+        record = circ_models.CirculationRecord.get(data['record_id'])
+    except Exception:
+        try:
+            record = _create_record(data['record'])
+        except ValueError:
+            return ('', 500)
+        record = circ_models.CirculationRecord.get(record['uuid'])
 
-    acquisition_type = data['type']
+    acquisition_type = data['acquisition_type']
     comments = data['comments']
-    delivery = data.get('delivery')
+    delivery = data['delivery']
+    payment_method = data['payment_method']
+    budget_code = data['budget_code']
+    copies = int(data['copies'])
 
     api.acquisition.request_acquisition(user, record, acquisition_type,
-                                        comments, delivery)
+                                        copies, payment_method, budget_code,
+                                        delivery, comments)
 
-    flash('Successfully created an acquisition request.')
+    flash('Successfully created an {0} request.'.format(acquisition_type))
     return ('', 200)
 
 
@@ -183,31 +243,9 @@ def register_acquisition():
 
 @blueprint.route('/api/acquisition/request_acquisition/', methods=['POST'])
 def request_acquisition():
-    data = json.loads(request.get_json())
-    user = circ_models.CirculationUser.get(data['user_id'])
-    return _create_acquisition(data, user)
-
-
-@blueprint.route('/api/acquisition/perform_action/', methods=['POST'])
-def perform_acquisition_action():
-    actions = {'confirm': api.acquisition.confirm_acquisition_request,
-               'receive': api.acquisition.receive_acquisition,
-               'deliver': api.acquisition.deliver_acquisition,
-               'decline': api.acquisition.decline_acquisition_request,
-               'cancel': api.acquisition.cancel_acquisition_request}
-    msgs = {'confirm': 'confirmed', 'decline': 'declined',
-            'receive': 'received', 'deliver': 'delivered',
-            'cancel': 'canceled'}
-
-    data = json.loads(request.get_json())
-    action = data['action']
-    acquisition_clc_id = data['acquisition_clc_id']
-
-    acquisition_clc = models.AcquisitionLoanCycle.get(acquisition_clc_id)
-
-    actions[action](acquisition_clc)
-
-    msg = 'Successfully {0} the acquisition request {1}.'
-    msg = msg.format(msgs[action], acquisition_clc_id)
-    flash(msg)
-    return ('', 200)
+    try:
+        user = get_user(current_user)
+        data = json.loads(request.get_json())
+        return _create_acquisition(data, user)
+    except AttributeError:
+        return ('', 403)

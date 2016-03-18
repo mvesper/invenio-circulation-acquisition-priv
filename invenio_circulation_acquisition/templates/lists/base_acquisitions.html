@@ -8,7 +8,7 @@
 # published by the Free Software Foundation; either version 2 of the
 # License, or (at your option) any later version.
 #
-# Invenio is distributed in the hope that it wacquisition be useful, but
+# Invenio is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 # General Public License for more details.
@@ -19,6 +19,7 @@
 #}
 
 {%- extends 'circulation_base.html' -%}
+{% from 'macros.html' import description_modal %}
 
 {%- block css %}
     {{ super() }}
@@ -33,23 +34,37 @@
 {%- block circulation_body -%}
     <table class="table table-condensed">
         <tr>
-            <th>Borrower</th>
+            <th>Requestor</th>
             <th>CCID</th>
             <th>Record</th>
-            <th>Delivery</th>
             <th>Actions</th>
         </tr>
-    {% for clc in acquisition_clcs %}
+    {% for clc in acquisition_lcs %}
         <tr>
             <td>{{clc.user.name}}</td>
             <td>{{clc.user.ccid}}</td>
             <td>{{clc.item.record.title}}</td>
-            <td>{{clc.delivery}}</td>
             <td class='col-md-2'>
-                <button type="button" class="btn btn-success acquisition_list_action" data-acquisition_clc_id="{{clc.id}}" data-action="{{confirmation_action}}">{{confirmation_name}}</button>
-                <button type="button" class="btn btn-danger acquisition_list_action" data-acquisition_clc_id="{{clc.id}}" data-action="decline">DECLINE</button>
+                {% if positive_actions %}
+                    {% for action, name, modal in positive_actions %}
+                        {% if modal %}
+                            <button type="button" class="btn btn-success entity_action" data-modal_type="" data-modal_id="{{modal}}" data-acquisition_lc_id="{{clc.id}}" data-action="{{action}}">{{name}}</button>
+                        {% else %}
+                            <button type="button" class="btn btn-success entity_action" data-acquisition_lc_id="{{clc.id}}" data-action="{{action}}">{{name}}</button>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if negative_actions %}
+                    {% for action, name in negative_actions %}
+                        <button type="button" class="btn btn-danger entity_action" data-modal_type="" data-modal_id="acquisition_cancelation" data-acquisition_lc_id="{{clc.id}}" data-action="{{action}}">{{name}}</button>
+                    {% endfor %}
+                {% endif %}
             </td>
         </tr>
     {% endfor %}
     </table>
+
+    {{ description_modal('acquisition_vendor_price', 'Enter Vendor ID and price', [('vendor_id', 'Vendor ID'), ('price', 'Price')])}}
+    {{ description_modal('acquisition_cancelation', 'Enter Cancelation Reason', [('reason', 'Reason')])}}
+
 {%- endblock -%}
