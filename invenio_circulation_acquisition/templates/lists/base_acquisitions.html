@@ -34,7 +34,7 @@
 {%- block circulation_body -%}
     <table class="table table-condensed">
         <tr>
-            <th>Requestor</th>
+            <th>Borrower</th>
             <th>CCID</th>
             <th>Record</th>
             <th>Actions</th>
@@ -64,7 +64,7 @@
     {% endfor %}
     </table>
 
-    {{ description_modal('acquisition_vendor_price', 'Enter Vendor ID and price', [('vendor_id', 'Vendor ID'), ('price', 'Price')])}}
+    {{ description_modal('acquisition_confirmation', 'Acquisition Confirmation', [('vendor_id', 'Vendor ID'), ('price', 'Price'), ('currency', 'Currency'), ('comments', 'Comments')])}}
     {{ description_modal('acquisition_cancelation', 'Enter Cancelation Reason', [('reason', 'Reason')])}}
 
 {%- endblock -%}

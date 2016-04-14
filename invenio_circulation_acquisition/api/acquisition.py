@@ -70,7 +70,8 @@ def try_confirm_acquisition_request(acquisition_loan_cycle):
         raise ValidationExceptions(exceptions)
 
 
-def confirm_acquisition_request(acquisition_loan_cycle, vendor_id, price):
+def confirm_acquisition_request(acquisition_loan_cycle,
+                                vendor_id, price, currency, comments):
     try:
         try_confirm_acquisition_request(acquisition_loan_cycle)
     except ValidationExceptions as e:
@@ -79,6 +80,8 @@ def confirm_acquisition_request(acquisition_loan_cycle, vendor_id, price):
     acquisition_loan_cycle.current_status = AcquisitionLoanCycle.STATUS_ORDERED
     acquisition_loan_cycle.vendor_id = vendor_id
     acquisition_loan_cycle.price = price
+    acquisition_loan_cycle.currency = currency
+    acquisition_loan_cycle.comments = comments
     acquisition_loan_cycle.save()
 
     create_event(acquisition_loan_cycle_id=acquisition_loan_cycle.id,

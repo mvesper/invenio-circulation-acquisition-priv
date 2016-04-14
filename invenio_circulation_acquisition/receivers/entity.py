@@ -21,7 +21,8 @@ def _entities_hub_search(sender, data):
 
     search = data
 
-    models_entities = {'acquisition_loan_cycle': models.AcquisitionLoanCycle}
+    models_entities = {'acquisition_loan_cycle': models.AcquisitionLoanCycle,
+                       'acquisition_vendor': models.AcquisitionVendor}
 
     entity = models_entities.get(sender)
     res = None
@@ -36,7 +37,8 @@ def _entity(sender, data):
 
     id = data
 
-    models_entities = {'acquisition_loan_cycle': models.AcquisitionLoanCycle}
+    models_entities = {'acquisition_loan_cycle': models.AcquisitionLoanCycle,
+                       'acquisition_vendor': models.AcquisitionVendor}
 
     entity = models_entities.get(sender)
     res = entity.get(id) if entity else None
@@ -67,7 +69,22 @@ def _entity_aggregations(entity, data):
 
 
 def _get_loan_cycle_aggregations(id):
-    return None
+    import invenio_circulation.models as models
+    import invenio_circulation_acquisition.models as acq_models
+
+    from flask import render_template
+
+    alc = acq_models.AcquisitionLoanCycle.get(id)
+
+    items = [alc.item]
+    users = [alc.user]
+    events = models.CirculationEvent.search('acquisition_loan_cycle_id:{0}'
+                                            .format(id))
+    events = sorted(events, key=lambda x: x.creation_date)
+
+    return [render_template('aggregations/user.html', users=users),
+            render_template('aggregations/item.html', items=items),
+            render_template('aggregations/event.html', events=events)]
 
 
 def _entity_class(entity, data):

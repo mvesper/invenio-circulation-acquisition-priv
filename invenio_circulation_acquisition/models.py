@@ -23,7 +23,9 @@ class AcquisitionLoanCycle(CirculationObject, db.Model):
     comments = db.Column(db.String(255))
     payment_method = db.Column(db.String(255))
     budget_code = db.Column(db.String(255))
+    invoice = db.Column(db.String(255))
     price = db.Column(db.String(255))
+    currency = db.Column(db.String(255))
     issued_date = db.Column(db.DateTime)
     creation_date = db.Column(db.DateTime)
     modification_date = db.Column(db.DateTime)
@@ -79,6 +81,7 @@ class AcquisitionVendor(CirculationObject, db.Model):
     email = db.Column(db.String(255))
     phone = db.Column(db.String(255))
     notes = db.Column(db.String(255))
+    _data = db.Column(db.LargeBinary)
 
     _json_schema = {'type': 'object',
                     'title': 'Loan Cycle',

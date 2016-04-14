@@ -29,7 +29,7 @@
             {% for lc in holds %}
             <tr>
                 <td>{{lc.item.record.title}}</td>
-                <td><button type="button" class="btn btn-default entity_action" data-acquisition_lc_id="{{lc.id}}" data-reason="" data-action="cancel_acquisition_request">CANCEL</button></td>
+                <td><button type="button" class="btn btn-default entity_action_confirm" data-acquisition_lc_id="{{lc.id}}" data-reason="" data-action="cancel_acquisition_request">CANCEL</button></td>
             </tr>
             {% endfor %}
         </table>
