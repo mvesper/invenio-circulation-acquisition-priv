@@ -25,6 +25,7 @@ import invenio_circulation_acquisition.api as api
 from flask import Blueprint, render_template, flash, request
 from flask_login import current_user
 from invenio_records.api import Record
+from invenio_pidstore.models import PersistentIdentifier
 from invenio_circulation.acl import circulation_admin_permission as cap
 from invenio_circulation.views.utils import get_user
 
@@ -97,7 +98,12 @@ def acquisition_request(record_id=None):
         # Anonymous User
         return render_template('invenio_theme/401.html')
 
-    rec = Record.get_record(record_id) if record_id else {}
+    if record_id:
+        _uuid = PersistentIdentifier.get('recid', record_id).object_uuid
+        rec = Record.get_record(_uuid)
+    else:
+        rec = {}
+
     _prepare_record(rec, rec_fields)
     _prepare_record_authors(rec)
 
@@ -115,7 +121,12 @@ def purchase_request(record_id=0):
         # Anonymous User
         return render_template('invenio_theme/401.html')
 
-    rec = Record.get_record(record_id) if record_id else {}
+    if record_id:
+        _uuid = PersistentIdentifier.get('recid', record_id).object_uuid
+        rec = Record.get_record(_uuid)
+    else:
+        rec = {}
+
     _prepare_record(rec, rec_fields)
     _prepare_record_authors(rec)
 
@@ -128,7 +139,12 @@ def purchase_request(record_id=0):
 @blueprint.route('/acquisition/register_acquisition/<record_id>')
 @cap.require(403)
 def acquisition_register(record_id=None):
-    rec = Record.get_record(record_id) if record_id else {}
+    if record_id:
+        _uuid = PersistentIdentifier.get('recid', record_id).object_uuid
+        rec = Record.get_record(_uuid)
+    else:
+        rec = {}
+
     _prepare_record(rec, rec_fields)
     _prepare_record_authors(rec)
     return render_template('circulation_acquisition_request.html',
@@ -139,7 +155,12 @@ def acquisition_register(record_id=None):
 @blueprint.route('/acquisition/register_purchase/<record_id>')
 @cap.require(403)
 def purchase_register(record_id=None):
-    rec = Record.get_record(record_id) if record_id else {}
+    if record_id:
+        _uuid = PersistentIdentifier.get('recid', record_id).object_uuid
+        rec = Record.get_record(_uuid)
+    else:
+        rec = {}
+
     _prepare_record(rec, rec_fields)
     _prepare_record_authors(rec)
     return render_template('circulation_acquisition_register.html',
@@ -216,7 +237,7 @@ def _create_acquisition(data, user):
             record = _create_record(data['record'])
         except ValueError:
             return ('', 500)
-        record = circ_models.CirculationRecord.get(record['uuid'])
+        record = circ_models.CirculationRecord.get(record['recid'])
 
     acquisition_type = data['acquisition_type']
     comments = data['comments']
